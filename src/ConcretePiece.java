@@ -79,6 +79,10 @@ public abstract class ConcretePiece implements Piece
             _kills++;
         }
     }
+    public void undoKill()
+    {
+        _kills--;
+    }
     public int getPieceNumber()
     {
         return _pieceNumber;

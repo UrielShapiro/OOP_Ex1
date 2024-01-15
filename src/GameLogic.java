@@ -20,7 +20,7 @@ public class GameLogic implements PlayableLogic {
     Including:
     - Initializing pieces on board.
     - initializing the boolean variables that say the king status (captured/win)
-    - Initializing the turns of the players. setting the second player turn first.
+    - Initializing the turns of the players. setting the second player turns first.
      */
     public GameLogic() {
         InitialSetup();
@@ -369,7 +369,7 @@ public class GameLogic implements PlayableLogic {
         for (ConcretePiece piece : MergedPlayersArray) {
             if (piece.getNumberOfKills() > 0) { //Only pieces who have kills will be printed (kills > 0)
                 System.out.print(piece.getPiecePosition() + ": ");
-                System.out.println(piece.getNumberOfKills()+ " kills");
+                System.out.println((piece).getNumberOfKills()+ " kills");
             }
         }
         System.out.println("***************************************************************************");
@@ -777,6 +777,7 @@ public class GameLogic implements PlayableLogic {
                     //Retrieving the position which the piece was last located
                     Position p_position = maybeKilledPiece.getPiece().getPositiom();
                     _board[p_position.getX()][p_position.getY()] = maybeKilledPiece.getPiece();
+                    _board[recentPos.getX()][recentPos.getY()].undoKill();  //Removes 1 kill from the kill counter of that piece.
                 }
             }
             //Setting the turn back to the last player.
