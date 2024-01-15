@@ -2,14 +2,13 @@ import java.util.ArrayList;
 
 public abstract class ConcretePiece implements Piece
 {
-    private final ConcretePlayer _player;
+    private ConcretePlayer _player;
     private final String _type;
     private Position _position;
     private final String _piecePosition;
     private final int _pieceNumber;
-    private final ArrayList<Position> moves = new ArrayList<>();
+    private ArrayList<Position> moves = new ArrayList<>();
     private int _kills;
-    private int _distance;
     public ConcretePiece(ConcretePlayer player,String type, Position position, String piecePosition, int number)
     {
         _player = player;
@@ -18,7 +17,6 @@ public abstract class ConcretePiece implements Piece
         _piecePosition = piecePosition;
         _kills = 0;
         _pieceNumber = number;
-        _distance = 0;
         moves.add(position);
     }
     @Override
@@ -33,7 +31,7 @@ public abstract class ConcretePiece implements Piece
     }
     public void setPosition(Position newPosition)
     {
-        _position= newPosition;
+        _position = new Position(newPosition);
     }
     public Position getPositiom()
     {
@@ -43,7 +41,7 @@ public abstract class ConcretePiece implements Piece
     {
         return _piecePosition;
     }
-    public void addPositionToStack(Position position)
+    public void addPositionToArray(Position position)
     {
         this.moves.add(position);
     }
@@ -57,16 +55,16 @@ public abstract class ConcretePiece implements Piece
     }
     public void removeLastMove()
     {
-        moves.remove(moves.size()-1);
+        moves.removeLast();
     }
     public String MovesToString()
     {
         String ans = "[";
         for (int i = 0; i < moves.size() - 1; i++) {
-            ans += moves.get(i).toString()+",";
+            ans += moves.get(i).toString()+", ";
         }
-        if (moves.size() >= 1) {
-            ans += moves.get(moves.size() - 1).toString();
+        if (!moves.isEmpty()) {
+            ans += moves.getLast().toString();
         }
         ans += "]";
         return ans;

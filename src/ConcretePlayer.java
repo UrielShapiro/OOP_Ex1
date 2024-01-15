@@ -2,7 +2,7 @@ import java.util.*;
 
 public class ConcretePlayer implements Player
 {
-    public int _wins;
+    private int _wins;
     private final boolean _isPlayerOne;
     private final ArrayList<ConcretePiece> pieces = new ArrayList<>();
     private boolean _wonLastGame;

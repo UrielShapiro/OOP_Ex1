@@ -4,11 +4,11 @@ public class GameLogic implements PlayableLogic {
     private static final int BOARD_SIZE = 11;
     private final ConcretePlayer _firstPlayer = new ConcretePlayer(true);
     private final ConcretePlayer _secondPlayer = new ConcretePlayer(false);
-    private final ConcretePiece[][] _board = new ConcretePiece[BOARD_SIZE][BOARD_SIZE];
+    private final ConcretePiece[][] _board = new ConcretePiece[getBoardSize()][getBoardSize()];
     private final Stack<Position> undoStack = new Stack<Position>();
     private final Stack<Position> currentPosition = new Stack<Position>();
     private final Stack<Pawn_Killed> killedPieces = new Stack<Pawn_Killed>();
-    private static int[][] numOfStepsBoard = new int[BOARD_SIZE][BOARD_SIZE];
+    private static final int[][] numOfStepsBoard = new int[BOARD_SIZE][BOARD_SIZE];
     private boolean firstPlayerTurn;
     private static boolean kingCaptured;
     private static boolean kingWin;
@@ -25,16 +25,15 @@ public class GameLogic implements PlayableLogic {
     public GameLogic() {
         InitialSetup();
         kingCaptured = false;
-        firstPlayerTurn = false;
         kingWin = false;
+        firstPlayerTurn = false;
     }
-
     /*
     A function that initializes all the pieces on board, with their starting positions.
-    The function also call other function which attach each piece to its owner (Player 1/2).
+    The function also calls another function which attaches each piece to its owner (Player 1/2).
      */
     public void InitialSetup() {
-        clearPlayerPiecesArrays();
+        clearPlayerPiecesArrays();      //Clears both players pieces arrays from previous games.
 
         _board[3][0] = new Pawn(_secondPlayer, new Position(3, 0), "A1", 1);
         _board[4][0] = new Pawn(_secondPlayer, new Position(4, 0), "A2", 2);
@@ -79,7 +78,7 @@ public class GameLogic implements PlayableLogic {
         _board[5][7] = new Pawn(_firstPlayer, new Position(5, 7), "D13", 13);
 
         attachPiecesToPlayer();
-        initializeStepsBoard();
+        initializeStepsBoard(); //TODO: remove it if necessary
     }
 
     /*
@@ -87,23 +86,24 @@ public class GameLogic implements PlayableLogic {
     Each player has an array containing all of its pieces.
      */
     private void attachPiecesToPlayer() {
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                if (_board[i][j] instanceof Pawn | _board[i][j] instanceof King) {
-                    if (_board[i][j].getOwner().isPlayerOne()) {
-                        _firstPlayer.addPieceToStack(_board[i][j]);
+        for (int i = 0; i < getBoardSize(); i++) {
+            for (int j = 0; j < getBoardSize(); j++) {
+                Position position = new Position(i,j);
+                if (getConcretePieceAtPosition(position) != null) {
+                    if (getConcretePieceAtPosition(position).getOwner().isPlayerOne()) {
+                        _firstPlayer.addPieceToStack(getConcretePieceAtPosition(position));
                     }
                     else {
-                        _secondPlayer.addPieceToStack(_board[i][j]);
+                        _secondPlayer.addPieceToStack(getConcretePieceAtPosition(position));
                     }
                 }
             }
         }
     }
-/*
-This function clears both players arrays of pieces.
-is used in order to start a game from zero.
- */
+    /*
+    This function clears both player arrays of pieces.
+    Is used to start a game from zero.
+    */
     private void clearPlayerPiecesArrays() {
         _firstPlayer.emptyPiecesArray();
         _secondPlayer.emptyPiecesArray();
@@ -112,7 +112,8 @@ is used in order to start a game from zero.
     private void initializeStepsBoard() {
         for (int i = 0; i < numOfStepsBoard.length; i++) {
             for (int j = 0; j < numOfStepsBoard.length; j++) {
-                if (_board[i][j] instanceof Pawn || _board[i][j] instanceof King) {
+                Position position = new Position(i,j);
+                if (getPieceAtPosition(position) instanceof ConcretePiece) {
                     numOfStepsBoard[i][j]++;
                 } else {
                     numOfStepsBoard[i][j] = 0;
@@ -124,10 +125,10 @@ is used in order to start a game from zero.
 
     @Override
     public boolean move(Position a, Position b) {
-        if (getPieceAtPosition(a).getOwner().isPlayerOne() && !firstPlayerTurn) {
+        if (getConcretePieceAtPosition(a).getOwner().isPlayerOne() &&  isSecondPlayerTurn()) {
             return false;
         }
-        if (firstPlayerTurn && !getPieceAtPosition(a).getOwner().isPlayerOne()) {
+        if (!isSecondPlayerTurn() && !getConcretePieceAtPosition(a).getOwner().isPlayerOne()) {
             return false;
         }
         if (!(legalMove(a, b))) {
@@ -136,8 +137,7 @@ is used in order to start a game from zero.
         if (!(SpaceIsClear(a, b))) {
             return false;
         }
-        if (getPieceAtPosition(a) instanceof Pawn && Position.isCorner(b))
-        {
+        if (getConcretePieceAtPosition(a) instanceof Pawn && Position.isCorner(b)) {
             return false;
         }
         undoStack.add(a);
@@ -146,7 +146,7 @@ is used in order to start a game from zero.
         _board[b.getX()][b.getY()] = _board[a.getX()][a.getY()];
         _board[a.getX()][a.getY()] = null;
         addPositionToPieceArray(b);
-        boolean aKillWasMade = eat(_board[b.getX()][b.getY()]);
+        boolean aKillWasMade = eat((ConcretePiece) getPieceAtPosition(b));
         if (!aKillWasMade) {
             killedPieces.add(new Pawn_Killed(_board[b.getX()][b.getY()], false));
         }
@@ -160,21 +160,27 @@ is used in order to start a game from zero.
     /*
     Each piece has an array containing the positions it stepped on.
     This function adds a given position to the array of positions of the piece that stands on the given position.
+    The function checks if the piece in the given position is player one's piece or the second player's piece.
+    Afterward, it goes through the array of pieces inside the player.
+    Until reaching the current piece (their names are the same).
+    Then, the function adds the position to that piece's position array.
     */
     private void addPositionToPieceArray(Position b) {
-        if (_board[b.getX()][b.getY()].getOwner().isPlayerOne()) {
+        int x = b.getX();
+        int y = b.getY();
+        if (_board[x][y].getOwner().isPlayerOne()) {
             int i = 0;
-            while (!_firstPlayer.getPieceFromArray(i).getPiecePosition().equals(_board[b.getX()][b.getY()].getPiecePosition())) {
+            while (!_firstPlayer.getPieceFromArray(i).getPiecePosition().equals(_board[x][y].getPiecePosition())) {
                 i++;
             }
-            _firstPlayer.getPieceFromArray(i).addPositionToStack(b);
+            _firstPlayer.getPieceFromArray(i).addPositionToArray(b);
         }
-        if (!_board[b.getX()][b.getY()].getOwner().isPlayerOne()) {
+        if (!_board[x][y].getOwner().isPlayerOne()) {
             int j = 0;
-            while (!_secondPlayer.getPieceFromArray(j).getPiecePosition().equals(_board[b.getX()][b.getY()].getPiecePosition())) {
+            while (!_secondPlayer.getPieceFromArray(j).getPiecePosition().equals(_board[x][y].getPiecePosition())) {
                 j++;
             }
-            _secondPlayer.getPieceFromArray(j).addPositionToStack(b);
+            _secondPlayer.getPieceFromArray(j).addPositionToArray(b);
         }
     }
     /*
@@ -186,13 +192,13 @@ is used in order to start a game from zero.
     The function is used to check if a given position is eligible to move to.
      */
     public boolean legalMove(Position a, Position b) {
-        if (b.getX() > BOARD_SIZE || b.getY() > BOARD_SIZE || b.getX() < 0 || b.getY() < 0) {
+        if (b.getX() > getBoardSize() || b.getY() > getBoardSize() || b.getX() < 0 || b.getY() < 0) {
             return false;
         }
-        if ((a.getX() != b.getX()) && (a.getY() != b.getY())) {
+        if ((a.getX() != b.getX()) && (a.getY() != b.getY())) { //Checks if the move is not only horizontal or only vertical.
             return false;
         }
-        return _board[b.getX()][b.getY()] == null;
+        return getPieceAtPosition(b) == null;   //If position b has a piece on it, it is not a legal position to move to.
     }
     /*
     This function checks if all cells (the road) between position 'a' to position 'b' are clear.
@@ -230,6 +236,7 @@ is used in order to start a game from zero.
                 }
             }
         }
+        //If the function did not return false until reaching here. The space between position a and position b is clear.
         return true;
     }
     /*
@@ -237,6 +244,10 @@ is used in order to start a game from zero.
      */
     @Override
     public Piece getPieceAtPosition(Position position) {
+        return _board[position.getX()][position.getY()];
+    }
+    public ConcretePiece getConcretePieceAtPosition(Position position)
+    {
         return _board[position.getX()][position.getY()];
     }
     /*
@@ -253,7 +264,11 @@ is used in order to start a game from zero.
     public Player getSecondPlayer() {
         return _secondPlayer;
     }
-
+    /*
+    This function returns true if the game is finished.
+    The game is finished only if the king was captured or the king reached one of the corners of the board.
+    The function adds a win to the player who won and updates each player's boolean value of "Won Last Game".
+     */
     @Override
     public boolean isGameFinished() {
         if (kingCaptured) {
@@ -266,7 +281,7 @@ is used in order to start a game from zero.
             _firstPlayer.setWonLastGame(true);
             _secondPlayer.setWonLastGame(false);
         }
-        return kingCaptured | kingWin;
+        return kingCaptured || kingWin;
     }
 
     private void calcNumOfSteps() {
@@ -306,7 +321,10 @@ is used in order to start a game from zero.
         }
         return arr;
     }
-
+    /*
+    This function prints end game statistics according to the second part of the assignment.
+    After each part of printing there will be 75 '*'.
+     */
     private void endGamePrints() {
         //Q2_1
         _firstPlayer.sortAccordingToNumOfSteps();
@@ -320,6 +338,7 @@ is used in order to start a game from zero.
                 }
             }
         }
+        //If the first player did not win the last game, the second player's array will be printed first.
         for (int i = 0; i < _secondPlayer.getArrayLength(); i++) {
             if (_secondPlayer.getPieceFromArray(i).getNumOfMoves() > 1) {
                 System.out.print(_secondPlayer.getPieceFromArray(i).getPiecePosition() + ": ");
@@ -327,7 +346,7 @@ is used in order to start a game from zero.
                 System.out.println();
             }
         }
-        if (!_firstPlayer.getWonLastGame()) {
+        if (!_firstPlayer.getWonLastGame()) {       //Will be printed only if the second player won the last game.
             for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
                 if (_firstPlayer.getPieceFromArray(i).getNumOfMoves() > 1) {
                     System.out.print(_firstPlayer.getPieceFromArray(i).getPiecePosition() + ": ");
@@ -339,6 +358,7 @@ is used in order to start a game from zero.
         System.out.println("***************************************************************************");
         //Q2_2
         ArrayList<ConcretePiece> MergedPlayersArray = new ArrayList<>();
+        //MergedPlayersArray will have both player pieces merged into one array.
         for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
             MergedPlayersArray.add(_firstPlayer.getPieceFromArray(i));
         }
@@ -347,18 +367,17 @@ is used in order to start a game from zero.
         }
         Q2_2Sort(MergedPlayersArray);
         for (ConcretePiece piece : MergedPlayersArray) {
-            if (piece.getNumberOfKills() > 0) {
+            if (piece.getNumberOfKills() > 0) { //Only pieces who have kills will be printed (kills > 0)
                 System.out.print(piece.getPiecePosition() + ": ");
                 System.out.println(piece.getNumberOfKills()+ " kills");
             }
         }
         System.out.println("***************************************************************************");
        //Q2_3
-        Q2_3Sort(MergedPlayersArray);
+        Q2_3Sort(MergedPlayersArray);   //Uses the merged pieces array and sort it according to the assignment.
         for (ConcretePiece piece : MergedPlayersArray) {
-            if (piece.getDistance() > 0) {
-                System.out.println(piece.getPiecePosition() + ": "
-                        + piece.getDistance() + " squares");
+            if (piece.getDistance() > 0) {  //Prints only pieces who moved in the game (squares moved > 0)
+                System.out.println(piece.getPiecePosition() + ": " + piece.getDistance() + " squares");
             }
         }
         System.out.println("***************************************************************************");
@@ -370,36 +389,54 @@ is used in order to start a game from zero.
             System.out.println("(" + pos.getX() + ", " + pos.getY() + "): " + getNumOfSteps(pos) + " pieces");
         }
     }
-
+    /*
+    This function sorts the array of ConcretePieces according to the Q2_2.
+     */
     public void Q2_2Sort(ArrayList<ConcretePiece> array) {
         Comparator<ConcretePiece> KillComp = (o1, o2) -> {
             if (o1.getNumberOfKills() == o2.getNumberOfKills()) {
                 if (o1.getPieceNumber() == o2.getPieceNumber()) {
+                    //Will be sorted according to the piece owner
+                    //only if the number of kills and the piece numbers are identical.
                     return Boolean.compare(o1.getConcreteOwner().getWonLastGame(), o2.getConcreteOwner().getWonLastGame());
                 }
+                //Will be sorted according to their unique number only if both pieces have the same number of kills.
                 return Integer.compare(o1.getPieceNumber(), o2.getPieceNumber());
             }
+            //Will be sorted on reverse according to the number of kills if both piece kills are not identical.
             return -1 * Integer.compare(o1.getNumberOfKills(), o2.getNumberOfKills());
         };
-        array.sort(KillComp);
+        array.sort(KillComp);   //Sorting the given array using the KillComp comparator.
     }
-
+    /*
+    This function sorts the array of ConcretePieces according to the Q2_3.
+     */
     public void Q2_3Sort(ArrayList<ConcretePiece> arr) {
         Comparator<ConcretePiece> DistanceComp = new Comparator<ConcretePiece>() {
             @Override
             public int compare(ConcretePiece o1, ConcretePiece o2) {
                 if (o1.getDistance() == o2.getDistance()) {
                     if (o1.getPieceNumber() == o2.getPieceNumber()) {
+                        //Will be sorted according to who won the last game only
+                        // if the distance passed by both players and the unique piece numbers are identical.
                         return Boolean.compare(o1.getConcreteOwner().getWonLastGame(),
                                 o2.getConcreteOwner().getWonLastGame());
                     }
+                    //Be sorted according to each piece unique number
+                    //only if both pieces numbers of squares passed are identical.
                     return Integer.compare(o1.getPieceNumber(), o2.getPieceNumber());
                 }
+                //Will be sorted reversely according to the number of squares each piece passed
+                //If that amount is not the same for both pieces.
                 return -1 * Integer.compare(o1.getDistance(), o2.getDistance());
             }
         };
-        arr.sort(DistanceComp);
+        arr.sort(DistanceComp); //Sorting given array using the DistanceComp comparator.
     }
+    /*
+    This function sorts the array of ConcretePieces according to the Q2_4.
+    TODO: ADD
+     */
     public ArrayList<PositionAndSteps> Q2_4Sort()
     {
         ArrayList<PositionAndSteps> arr = new ArrayList<>();
@@ -433,11 +470,22 @@ is used in order to start a game from zero.
     {
         return numOfStepsBoard[p.getX()][p.getY()];
     }
+    /*
+    This function returns true if it is the second player turn.
+     */
     @Override
     public boolean isSecondPlayerTurn() {
         return !firstPlayerTurn;
     }
-
+    /*
+    This function resets the game by doing the following:
+    - reseting the board by removing all of its pieces.
+    - Changing both boolean variables linked to capturing the king and first player winning - to false.
+        so that a new game could begin without ending immediately.
+    - Clearing both stacks that are used for undoing a move.
+    - Clearing the stack that contains all the killed pieces (is also used for the undo function).
+    - Setting the board for a new game by placing pieces on the board (InitialSetup function).
+     */
     @Override
     public void reset() {
         for (int i = 0; i < BOARD_SIZE; i++) {
@@ -450,38 +498,48 @@ is used in order to start a game from zero.
         firstPlayerTurn = false;
         currentPosition.clear();
         undoStack.clear();
+        killedPieces.clear();
     }
-
-    private boolean eat(ConcretePiece a) {
-        int y = a.getPositiom().getY();
-        int x = a.getPositiom().getX();
-        if (a instanceof Pawn) {
-            //Check if he is close to the borders
+    /*
+    This function will return true if a piece was eaten by ConcretePiece 'Cpiece'.
+    The function parameter is a ConcretePiece that made the last move.
+    The function checks if ConcretePiece 'Cpiece' should eat a surrounding piece.
+     */
+    private boolean eat(ConcretePiece Cpiece) {
+        int y = Cpiece.getPositiom().getY();
+        int x = Cpiece.getPositiom().getX();
+        if (Cpiece instanceof Pawn) {    //If 'Cpiece' is the king, it cannot eat other pieces.
+            //Check if he is close to the borders, so that only one piece is required to eat.
+            //Also check if the piece owners are not the same and if the eaten piece is a pawn (because a king has
+            // other parameters to be eaten).
             if (x == 1 && _board[x - 1][y] instanceof Pawn &&
-                    !(a.getOwner().equals(_board[x - 1][y].getOwner()))) {
+                    !(Cpiece.getOwner().equals(_board[x - 1][y].getOwner()))) {
+                //If a piece needs to be eaten, we will add it first to the killed pieces array.
+                //Will be used to undo that kill if needed.
                 killedPieces.add(new Pawn_Killed(_board[x - 1][y], true));
-                _board[x - 1][y] = null;
-                killedApiece = true;
+                _board[x - 1][y] = null;    //Removing the killed piece from the board.
+                killedApiece = true;        //Will be used later to add a kill to 'Cpiece' later.
             }
             if (x == 9 && _board[x + 1][y] instanceof Pawn
-                    && !(a.getOwner().equals(_board[x + 1][y].getOwner()))) {
+                    && !(Cpiece.getOwner().equals(_board[x + 1][y].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x + 1][y], true));
                 _board[x + 1][y] = null;
                 killedApiece = true;
             }
             if (y == 9 && _board[x][y + 1] instanceof Pawn
-                    && !(a.getOwner().equals(_board[x][y + 1].getOwner()))) {
+                    && !(Cpiece.getOwner().equals(_board[x][y + 1].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x][y + 1], true));
                 _board[x][y + 1] = null;
                 killedApiece = true;
             }
             if (y == 1 && _board[x][y - 1] instanceof Pawn
-                    && !(a.getOwner().equals(_board[x][y - 1].getOwner()))) {
+                    && !(Cpiece.getOwner().equals(_board[x][y - 1].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x][y - 1], true));
                 _board[x][y - 1] = null;
                 killedApiece = true;
             }
-            //Check his surroundings
+            //Check his surroundings to see if he got another piece from the same player in the other side of the
+            //opposing piece.
             if (x + 2 < BOARD_SIZE) {
                 if (_board[x + 1][y] instanceof Pawn && _board[x + 2][y] instanceof Pawn) {
                     if (!_board[x + 1][y].getOwner().equals(_board[x][y].getOwner())
@@ -523,33 +581,42 @@ is used in order to start a game from zero.
                 }
             }
         }
-        eatKing(a);
+        eatKing(Cpiece);    //Calls a function that checks if the king was eaten that turn.
         if (killedApiece) {
-            addKill(a.getPositiom());
+            Cpiece.kill();  //Adds a kill to the piece kill count. Is used later for sorting.
+            //addKill(Cpiece.getPositiom()); TODO: REMOVE AFTER TESTING.
             killedApiece = !killedApiece;
-            return true;
+            return true;    //Returning true because a piece was eaten.
         }
-        return false;
+        return false;       //Returning false because no piece was eaten.
     }
 
-    private void addKill(Position a) {
-        int x = a.getX();
-        int y = a.getY();
-        if (_board[x][y].getOwner().isPlayerOne()) {
-            for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
-                if (_board[x][y].getPiecePosition().equals(_firstPlayer.getPieceFromArray(i).getPiecePosition()))
-                    _firstPlayer.getPieceFromArray(i).kill();
-            }
-        }
-        if (!_board[x][y].getOwner().isPlayerOne()) {
-            for (int i = 0; i < _secondPlayer.getArrayLength(); i++) {
-                if (_board[x][y].getPiecePosition().equals(_secondPlayer.getPieceFromArray(i).getPiecePosition())) {
-                    _secondPlayer.getPieceFromArray(i).kill();
-                }
-            }
-        }
-    }
+//    private void addKill(Position a) {
+//        int x = a.getX();
+//        int y = a.getY();
+//        if (_board[x][y].getOwner().isPlayerOne()) {
+//            for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
+//                if (_board[x][y].getPiecePosition().equals(_firstPlayer.getPieceFromArray(i).getPiecePosition()))
+//                    _firstPlayer.getPieceFromArray(i).kill();
+//            }
+//        }
+//        if (!_board[x][y].getOwner().isPlayerOne()) {
+//            for (int i = 0; i < _secondPlayer.getArrayLength(); i++) {
+//                if (_board[x][y].getPiecePosition().equals(_secondPlayer.getPieceFromArray(i).getPiecePosition())) {
+//                    _secondPlayer.getPieceFromArray(i).kill();
+//                }
+//            }
+//        }
+//    }
 
+    /*
+    This function check if a king was eaten after ConcretePiece 'piece' made a move.
+    The function has 4 boolean flags. all 4 of them need to be true in order for the king to be eaten.
+    If the king is near one of the borders. the flag of the border that the king is close to will be true
+    - so that only 3 flags will need to be true.
+    The function checks all 4 directions of 'piece' for the king. if the king is found in one of the directions,
+    the function will check the king surroundings to see if it is captured.
+     */
     public void eatKing(ConcretePiece piece) {
         int x = piece.getPositiom().getX();
         int y = piece.getPositiom().getY();
@@ -564,7 +631,7 @@ is used in order to start a game from zero.
                         flag1 = true;
                     }
                 } else {
-                    flag1 = true;
+                    flag1 = true;   //If x + 2 > BOARD_SIZE, the king is near the boarder. only 3 flags needed.
                 }
                 if (y + 1 < BOARD_SIZE) {
                     if (_board[x + 1][y + 1] instanceof Pawn && !_board[x + 1][y + 1].getOwner().isPlayerOne()) {
@@ -583,7 +650,7 @@ is used in order to start a game from zero.
                 if (!_board[x][y].getOwner().isPlayerOne()) {
                     flag4 = true;
                 }
-                kingCaptured = flag1 && flag2 && flag3 && flag4;
+                kingCaptured = flag1 && flag2 && flag3 && flag4;    //kingCaptured will be true only if all 4 flags are true.
                 if (kingCaptured) {
                     killedApiece = true;
                 }
@@ -681,32 +748,50 @@ is used in order to start a game from zero.
         }
     }
 
+    /*
+    This function returns true only if one of the borders of the board contains the king.
+     */
     private boolean kingInCorner() {
-        return _board[0][0] instanceof King | _board[0][BOARD_SIZE - 1] instanceof King
-                | _board[BOARD_SIZE - 1][0] instanceof King | _board[BOARD_SIZE - 1][BOARD_SIZE - 1] instanceof King;
+        return _board[0][0] instanceof King || _board[0][BOARD_SIZE - 1] instanceof King
+                || _board[BOARD_SIZE - 1][0] instanceof King || _board[BOARD_SIZE - 1][BOARD_SIZE - 1] instanceof King;
     }
-
+    /*
+    This function is used to undo the last move made.
+    Can go as long as the start of the game.
+    It Will be used when the "Undo" button is pressed.
+     */
     @Override
     public void undoLastMove() {
         if (!undoStack.isEmpty() & !currentPosition.isEmpty()) {
             Position recentPos = new Position(undoStack.pop());
             Position currentPos = new Position(currentPosition.pop());
-            removeLastPositionFromMovesArray(currentPos);
+            removeLastPositionFromMovesArray(currentPos); //Removes the last position of the piece from its moves array.
+            //Put the piece at its last position.
             _board[recentPos.getX()][recentPos.getY()] = _board[currentPos.getX()][currentPos.getY()];
+            //Remove the piece from its current position.
             _board[currentPos.getX()][currentPos.getY()] = null;
+            //If in the last move a piece was killed, it should be brought back.
             if (!killedPieces.isEmpty()) {
-                ConcretePiece p = killedPieces.peek().getPiece();
-                if (killedPieces.pop().gotKilled()) {
-                    Position p_position = p.getPositiom();
-                    _board[p_position.getX()][p_position.getY()] = p;
+                Pawn_Killed maybeKilledPiece = killedPieces.pop();
+                if (maybeKilledPiece.gotKilled()) {   //If the last piece from the array was killed, it will be brought back.
+                    //Retrieving the position which the piece was last located
+                    Position p_position = maybeKilledPiece.getPiece().getPositiom();
+                    _board[p_position.getX()][p_position.getY()] = maybeKilledPiece.getPiece();
                 }
             }
+            //Setting the turn back to the last player.
             firstPlayerTurn = !firstPlayerTurn;
         }
     }
-
+    /*
+    This function removes the last position from the piece's moves array.
+    The function first finds the owner of the piece which is located at position 'p'.
+    Then the function reaches the corresponding piece from the player pieces array (by checking if its String of player
+    symbol (A/D/K) + unique number are identical.
+    Afterward, the function removes the last move from the array.
+     */
     private void removeLastPositionFromMovesArray(Position p) {
-        if (_board[p.getX()][p.getY()].getOwner().isPlayerOne()) {
+        if (getConcretePieceAtPosition(p).getOwner().isPlayerOne()) {
             for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
                 if (_firstPlayer.getPieceFromArray(i).getPiecePosition().equals(_board[p.getX()][p.getY()].getPiecePosition())) {
                     _firstPlayer.getPieceFromArray(i).removeLastMove();
@@ -720,11 +805,17 @@ is used in order to start a game from zero.
             }
         }
     }
-
+    /*
+    This function returns the board size.
+     */
     @Override
     public int getBoardSize() {
         return BOARD_SIZE;
     }
+    /*
+    This function returns the board size. But it is static.
+    Is used in the position class.
+     */
     public static int getBoardSizeStatic() {
         return BOARD_SIZE;
     }
