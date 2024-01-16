@@ -2,12 +2,12 @@ import java.util.ArrayList;
 
 public abstract class ConcretePiece implements Piece
 {
-    private ConcretePlayer _player;
+    private final ConcretePlayer _player;
     private final String _type;
     private Position _position;
     private final String _piecePosition;
     private final int _pieceNumber;
-    private ArrayList<Position> moves = new ArrayList<>();
+    private final ArrayList<Position> moves = new ArrayList<>();
     private int _kills;
     public ConcretePiece(ConcretePlayer player,String type, Position position, String piecePosition, int number)
     {
@@ -33,7 +33,7 @@ public abstract class ConcretePiece implements Piece
     {
         _position = new Position(newPosition);
     }
-    public Position getPositiom()
+    public Position getPosition()
     {
         return _position;
     }

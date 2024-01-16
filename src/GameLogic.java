@@ -135,6 +135,10 @@ public class GameLogic implements PlayableLogic {
 
     @Override
     public boolean move(Position a, Position b) {
+        if (getConcretePieceAtPosition(a) == null)
+        {
+            return false;
+        }
         if (getConcretePieceAtPosition(a).getOwner().isPlayerOne() &&  isSecondPlayerTurn()) {
             return false;
         }
@@ -215,7 +219,7 @@ public class GameLogic implements PlayableLogic {
     This function checks if all cells (the road) between position 'a' to position 'b' are clear.
     If the road is not clear, the function will return false.
     Else, the function returns true.
-    This function is used in order to check if a given piece at position 'a' is able to move to position 'b' according
+    This function is used to check if a given piece at position 'a' is able to move to position 'b' according
     to the game rules.
      */
     public boolean SpaceIsClear(Position a, Position b) {
@@ -371,11 +375,13 @@ public class GameLogic implements PlayableLogic {
      */
     public void Q2_2Sort(ArrayList<ConcretePiece> array) {
         Comparator<ConcretePiece> KillComp = (o1, o2) -> {
-            if (o1.getNumberOfKills() == o2.getNumberOfKills()) {
-                if (o1.getPieceNumber() == o2.getPieceNumber()) {
+            if (o1.getNumberOfKills() == o2.getNumberOfKills())
+            {
+                if (o1.getPieceNumber() == o2.getPieceNumber())
+                {
                     //Will be sorted according to the piece owner
                     //only if the number of kills and the piece numbers are identical.
-                    return Boolean.compare(o1.getConcreteOwner().getWonLastGame(), o2.getConcreteOwner().getWonLastGame());
+                    return -1 * Boolean.compare(o1.getConcreteOwner().getWonLastGame(), o2.getConcreteOwner().getWonLastGame());
                 }
                 //Will be sorted according to their unique number only if both pieces have the same number of kills.
                 return Integer.compare(o1.getPieceNumber(), o2.getPieceNumber());
@@ -396,7 +402,7 @@ public class GameLogic implements PlayableLogic {
                     if (o1.getPieceNumber() == o2.getPieceNumber()) {
                         //Will be sorted according to who won the last game only
                         // if the distance passed by both players and the unique piece numbers are identical.
-                        return Boolean.compare(o1.getConcreteOwner().getWonLastGame(),
+                        return -1 * Boolean.compare(o1.getConcreteOwner().getWonLastGame(),
                                 o2.getConcreteOwner().getWonLastGame());
                     }
                     //Be sorted according to each piece unique number
@@ -477,8 +483,23 @@ public class GameLogic implements PlayableLogic {
     The function checks if ConcretePiece 'Cpiece' should eat a surrounding piece.
      */
     private boolean eat(ConcretePiece Cpiece) {
-        int y = Cpiece.getPositiom().getY();
-        int x = Cpiece.getPositiom().getX();
+        int y = Cpiece.getPosition().getY();
+        int x = Cpiece.getPosition().getX();
+        int i = 0;
+        int addKills = 0;
+        boolean firstPlayer;
+        if (Cpiece.getOwner().isPlayerOne()) {
+            firstPlayer = true;
+            while (!_firstPlayer.getPieceFromArray(i).getPiecePosition().equals(Cpiece.getPiecePosition())) {
+                i++;
+            }
+        }
+        else {
+            firstPlayer = false;
+            while (!_secondPlayer.getPieceFromArray(i).getPiecePosition().equals(Cpiece.getPiecePosition())) {
+                i++;
+            }
+        }
         if (Cpiece instanceof Pawn) {    //If 'Cpiece' is the king, it cannot eat other pieces.
             //Check if he is close to the borders, so that only one piece is required to eat.
             //Also check if the piece owners are not the same and if the eaten piece is a pawn (because a king has
@@ -490,24 +511,28 @@ public class GameLogic implements PlayableLogic {
                 killedPieces.add(new Pawn_Killed(_board[x - 1][y], true));
                 _board[x - 1][y] = null;    //Removing the killed piece from the board.
                 killedApiece = true;        //Will be used later to add a kill to 'Cpiece' later.
+                addKills++;  //Adds a kill to the counter. Will later be added to the piece 'kills' data member.
             }
-            if (x == 9 && _board[x + 1][y] instanceof Pawn
+            if (x == BOARD_SIZE - 2 && _board[x + 1][y] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x + 1][y].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x + 1][y], true));
                 _board[x + 1][y] = null;
                 killedApiece = true;
+                addKills++;
             }
-            if (y == 9 && _board[x][y + 1] instanceof Pawn
+            if (y == BOARD_SIZE - 2 && _board[x][y + 1] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x][y + 1].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x][y + 1], true));
                 _board[x][y + 1] = null;
                 killedApiece = true;
+                addKills++;
             }
             if (y == 1 && _board[x][y - 1] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x][y - 1].getOwner()))) {
                 killedPieces.add(new Pawn_Killed(_board[x][y - 1], true));
                 _board[x][y - 1] = null;
                 killedApiece = true;
+                addKills++;
             }
             //Check his surroundings to see if he got another piece from the same player in the other side of the
             //opposing piece.
@@ -518,6 +543,7 @@ public class GameLogic implements PlayableLogic {
                         killedPieces.add(new Pawn_Killed(_board[x + 1][y], true));
                         _board[x + 1][y] = null;
                         killedApiece = true;
+                        addKills++;
                     }
                 }
             }
@@ -528,6 +554,7 @@ public class GameLogic implements PlayableLogic {
                         killedPieces.add(new Pawn_Killed(_board[x - 1][y], true));
                         _board[x - 1][y] = null;
                         killedApiece = true;
+                        addKills++;
                     }
                 }
             }
@@ -538,6 +565,7 @@ public class GameLogic implements PlayableLogic {
                         killedPieces.add(new Pawn_Killed(_board[x][y + 1], true));
                         _board[x][y + 1] = null;
                         killedApiece = true;
+                        addKills++;
                     }
                 }
             }
@@ -548,37 +576,28 @@ public class GameLogic implements PlayableLogic {
                         killedPieces.add(new Pawn_Killed(_board[x][y - 1], true));
                         _board[x][y - 1] = null;
                         killedApiece = true;
+                        addKills++;
                     }
                 }
             }
         }
         eatKing(Cpiece);    //Calls a function that checks if the king was eaten that turn.
         if (killedApiece) {
-            Cpiece.kill();  //Adds a kill to the piece kill count. Is used later for sorting.
-            //addKill(Cpiece.getPositiom()); TODO: REMOVE AFTER TESTING.
-            killedApiece = !killedApiece;
+            killedApiece = false;
+            for (int j = 0; j < addKills; j++) {
+                if (firstPlayer)
+                {
+                    _firstPlayer.getPieceFromArray(i).kill();   //Adds a kill to the piece who killed.
+                }
+                else
+                {
+                    _secondPlayer.getPieceFromArray(i).kill();
+                }
+            }
             return true;    //Returning true because a piece was eaten.
         }
         return false;       //Returning false because no piece was eaten.
     }
-
-//    private void addKill(Position a) {
-//        int x = a.getX();
-//        int y = a.getY();
-//        if (_board[x][y].getOwner().isPlayerOne()) {
-//            for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
-//                if (_board[x][y].getPiecePosition().equals(_firstPlayer.getPieceFromArray(i).getPiecePosition()))
-//                    _firstPlayer.getPieceFromArray(i).kill();
-//            }
-//        }
-//        if (!_board[x][y].getOwner().isPlayerOne()) {
-//            for (int i = 0; i < _secondPlayer.getArrayLength(); i++) {
-//                if (_board[x][y].getPiecePosition().equals(_secondPlayer.getPieceFromArray(i).getPiecePosition())) {
-//                    _secondPlayer.getPieceFromArray(i).kill();
-//                }
-//            }
-//        }
-//    }
 
     /*
     This function check if a king was eaten after ConcretePiece 'piece' made a move.
@@ -589,8 +608,8 @@ public class GameLogic implements PlayableLogic {
     the function will check the king's surroundings to see if it is captured.
      */
     public void eatKing(ConcretePiece piece) {
-        int x = piece.getPositiom().getX();
-        int y = piece.getPositiom().getY();
+        int x = piece.getPosition().getX();
+        int y = piece.getPosition().getY();
         boolean flag1 = false;
         boolean flag2 = false;
         boolean flag3 = false;
@@ -624,6 +643,7 @@ public class GameLogic implements PlayableLogic {
                 kingCaptured = flag1 && flag2 && flag3 && flag4;    //kingCaptured will be true only if all 4 flags are true.
                 if (kingCaptured) {
                     killedApiece = true;
+                    //piece.kill();
                 }
                 return;
             }
@@ -756,7 +776,7 @@ public class GameLogic implements PlayableLogic {
                 Pawn_Killed maybeKilledPiece = killedPieces.pop();
                 if (maybeKilledPiece.gotKilled()) {   //If the last piece from the array was killed, it will be brought back.
                     //Retrieving the position which the piece was last located
-                    Position p_position = maybeKilledPiece.getPiece().getPositiom();
+                    Position p_position = maybeKilledPiece.getPiece().getPosition();
                     _board[p_position.getX()][p_position.getY()] = maybeKilledPiece.getPiece();
                     _board[recentPos.getX()][recentPos.getY()].undoKill();  //Removes 1 kill from the kill counter of that piece.
                 }

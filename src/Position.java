@@ -4,7 +4,7 @@ public class Position
 {
     private final int _x;
     private final int _y;
-    private ArrayList<String> PiecesWhoStepped = new ArrayList<>();
+    private final ArrayList<String> PiecesWhoStepped = new ArrayList<>();
     public Position(int x, int y)
     {
         _x = x;
