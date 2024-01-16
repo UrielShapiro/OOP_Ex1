@@ -8,7 +8,7 @@ public class GameLogic implements PlayableLogic {
     private final Stack<Position> undoStack = new Stack<Position>();
     private final Stack<Position> currentPosition = new Stack<Position>();
     private final Stack<Pawn_Killed> killedPieces = new Stack<Pawn_Killed>();
-    private static final int[][] numOfStepsBoard = new int[BOARD_SIZE][BOARD_SIZE];
+    private static Position[][] numOfStepsBoard = new Position[BOARD_SIZE][BOARD_SIZE];
     private boolean firstPlayerTurn;
     private static boolean kingCaptured;
     private static boolean kingWin;
@@ -34,7 +34,7 @@ public class GameLogic implements PlayableLogic {
      */
     public void InitialSetup() {
         clearPlayerPiecesArrays();      //Clears both players pieces arrays from previous games.
-
+        clearStepsBoard();              //Clears the board which counts the number of steps each position has.
         _board[3][0] = new Pawn(_secondPlayer, new Position(3, 0), "A1", 1);
         _board[4][0] = new Pawn(_secondPlayer, new Position(4, 0), "A2", 2);
         _board[5][0] = new Pawn(_secondPlayer, new Position(5, 0), "A3", 3);
@@ -78,7 +78,7 @@ public class GameLogic implements PlayableLogic {
         _board[5][7] = new Pawn(_firstPlayer, new Position(5, 7), "D13", 13);
 
         attachPiecesToPlayer();
-        initializeStepsBoard(); //TODO: remove it if necessary
+        InitializeStepsBoard();
     }
 
     /*
@@ -108,15 +108,25 @@ public class GameLogic implements PlayableLogic {
         _firstPlayer.emptyPiecesArray();
         _secondPlayer.emptyPiecesArray();
     }
-
-    private void initializeStepsBoard() {
+    /*
+    This function clears the board which counts the number of steps each position has by creating a new board.
+     */
+    public void clearStepsBoard()
+    {
+        numOfStepsBoard = new Position[BOARD_SIZE][BOARD_SIZE];
+    }
+    /*
+    Initialize the board which counts the number of steps for each position.
+     */
+    private void InitializeStepsBoard()
+    {
         for (int i = 0; i < numOfStepsBoard.length; i++) {
             for (int j = 0; j < numOfStepsBoard.length; j++) {
-                Position position = new Position(i,j);
+                Position position = new Position(i, j);
+                numOfStepsBoard[i][j] = new Position(i,j);   //Adds the corresponding position for each cell in the board.
                 if (getPieceAtPosition(position) instanceof ConcretePiece) {
-                    numOfStepsBoard[i][j]++;
-                } else {
-                    numOfStepsBoard[i][j] = 0;
+                    //Add each piece to its location at the beginning of the game.
+                    numOfStepsBoard[i][j].addPieceToArray(getConcretePieceAtPosition(position));
                 }
             }
         }
@@ -146,6 +156,7 @@ public class GameLogic implements PlayableLogic {
         _board[b.getX()][b.getY()] = _board[a.getX()][a.getY()];
         _board[a.getX()][a.getY()] = null;
         addPositionToPieceArray(b);
+        numOfStepsBoard[b.getX()][b.getY()].addPieceToArray(_board[b.getX()][b.getY()]);
         boolean aKillWasMade = eat((ConcretePiece) getPieceAtPosition(b));
         if (!aKillWasMade) {
             killedPieces.add(new Pawn_Killed(_board[b.getX()][b.getY()], false));
@@ -246,6 +257,10 @@ public class GameLogic implements PlayableLogic {
     public Piece getPieceAtPosition(Position position) {
         return _board[position.getX()][position.getY()];
     }
+    /*
+    This function returns the 'ConcretePiece' at a given position by referring to the board at that position
+    Is used mainly where a 'ConcretePiece' is necessary, not just 'Piece' for activating functions on the piece.
+     */
     public ConcretePiece getConcretePieceAtPosition(Position position)
     {
         return _board[position.getX()][position.getY()];
@@ -282,44 +297,6 @@ public class GameLogic implements PlayableLogic {
             _secondPlayer.setWonLastGame(false);
         }
         return kingCaptured || kingWin;
-    }
-
-    private void calcNumOfSteps() {
-        for (int i = 0; i < _firstPlayer.getArrayLength(); i++) {
-            ArrayList<Position> firstPlayerMovesArray = new ArrayList<>(removeDuplicates(_firstPlayer.getPieceFromArray(i).getMoves()));
-            for (int j = 0; j < firstPlayerMovesArray.size(); j++) {
-                int x = firstPlayerMovesArray.get(j).getX();
-                int y = firstPlayerMovesArray.get(j).getY();
-                numOfStepsBoard[x][y]++;
-            }
-        }
-        for (int i = 0; i < _secondPlayer.getArrayLength(); i++) {
-            ArrayList<Position> secondPlayerMovesArray = new ArrayList<>(removeDuplicates(_secondPlayer.getPieceFromArray(i).getMoves()));
-            for (int j = 0; j < secondPlayerMovesArray.size(); j++) {
-                int x = secondPlayerMovesArray.get(j).getX();
-                int y = secondPlayerMovesArray.get(j).getY();
-                numOfStepsBoard[x][y]++;
-            }
-        }
-    }
-
-    private ArrayList<Position> removeDuplicates(ArrayList<Position> array) {
-        ArrayList<Position> arr = new ArrayList<>();
-        arr.add(array.getFirst());
-        boolean notDuplicant = true;
-        for (int i = 1; i < array.size(); i++) {
-            for (int j = 0; j < arr.size(); j++) {
-                if (arr.get(j).equal(array.get(i))) {
-                    notDuplicant = false;
-                }
-            }
-            if (notDuplicant)
-            {
-                arr.add(array.get(i));
-            }
-            notDuplicant = true;
-        }
-        return arr;
     }
     /*
     This function prints end game statistics according to the second part of the assignment.
@@ -382,12 +359,12 @@ public class GameLogic implements PlayableLogic {
         }
         System.out.println("***************************************************************************");
         //Q2_4
-        calcNumOfSteps();
-        ArrayList<PositionAndSteps> arr = Q2_4Sort();
+        //calcNumOfSteps();
+        ArrayList<Position> arr = Q2_4Sort();
         for (int i = 0; i < arr.size(); i++) {
-            Position pos = new Position(arr.get(i).getPosition());
-            System.out.println("(" + pos.getX() + ", " + pos.getY() + "): " + getNumOfSteps(pos) + " pieces");
+            System.out.println(arr.get(i).toString() + arr.get(i).numOfSteps() + " pieces");
         }
+        System.out.println("***************************************************************************");
     }
     /*
     This function sorts the array of ConcretePieces according to the Q2_2.
@@ -435,40 +412,34 @@ public class GameLogic implements PlayableLogic {
     }
     /*
     This function sorts the array of ConcretePieces according to the Q2_4.
-    TODO: ADD
      */
-    public ArrayList<PositionAndSteps> Q2_4Sort()
+   public ArrayList<Position> Q2_4Sort()
     {
-        ArrayList<PositionAndSteps> arr = new ArrayList<>();
+        ArrayList<Position> arr = new ArrayList<>();
         for (int i = 0; i < numOfStepsBoard.length; i++) {
             for (int j = 0; j < numOfStepsBoard.length; j++) {
-                Position pos = new Position(i,j);
-                if (getNumOfSteps(pos) > 1)
+                if (numOfStepsBoard[i][j].numOfSteps() > 1)  //Only positions with more than one step will be added
                 {
-                    arr.add(new PositionAndSteps(pos, getNumOfSteps(pos)));
+                    arr.add(numOfStepsBoard[i][j]);
                 }
             }
         }
-        Comparator<PositionAndSteps> comp = new Comparator<PositionAndSteps>() {
+        Comparator<Position> comp = new Comparator<Position>() {
             @Override
-            public int compare(PositionAndSteps o1, PositionAndSteps o2) {
-                if (o1.getSteps() == o2.getSteps())
+            public int compare(Position o1, Position o2) {
+                if (o1.numOfSteps() == o2.numOfSteps())
                 {
-                    if (o1.getPosition().getX() == o2.getPosition().getX())
+                    if (o1.getX() == o2.getX())
                     {
-                        return Integer.compare(o1.getPosition().getY(), o2.getPosition().getY());
+                        return Integer.compare(o1.getY(), o2.getY());
                     }
-                    return Integer.compare(o1.getPosition().getX(), o2.getPosition().getX());
+                    return Integer.compare(o1.getX(), o2.getX());
                 }
-                return -1 * Integer.compare(o1.getSteps(), o2.getSteps());
+                return -1 * Integer.compare(o1.numOfSteps(), o2.numOfSteps());
             }
         };
         arr.sort(comp);
         return arr;
-    }
-    public static int getNumOfSteps(Position p)
-    {
-        return numOfStepsBoard[p.getX()][p.getY()];
     }
     /*
     This function returns true if it is the second player turn.
@@ -611,11 +582,11 @@ public class GameLogic implements PlayableLogic {
 
     /*
     This function check if a king was eaten after ConcretePiece 'piece' made a move.
-    The function has 4 boolean flags. all 4 of them need to be true in order for the king to be eaten.
-    If the king is near one of the borders. the flag of the border that the king is close to will be true
+    The function has 4 boolean flags. All 4 of them need to be true in order for the king to be eaten.
+    If the king is near one of the borders. The flag of the border that the king is close to will be true
     - so that only 3 flags will need to be true.
-    The function checks all 4 directions of 'piece' for the king. if the king is found in one of the directions,
-    the function will check the king surroundings to see if it is captured.
+    The function checks all 4 directions of 'piece' for the king. If the king is found in one of the directions,
+    the function will check the king's surroundings to see if it is captured.
      */
     public void eatKing(ConcretePiece piece) {
         int x = piece.getPositiom().getX();
@@ -767,6 +738,16 @@ public class GameLogic implements PlayableLogic {
             Position currentPos = new Position(currentPosition.pop());
             removeLastPositionFromMovesArray(currentPos); //Removes the last position of the piece from its moves array.
             //Put the piece at its last position.
+
+            //After removing the position from the position array of the piece.
+            //We want to see if it stepped there more than once.
+            //We will do so by checking if his array of moves still has that position.
+            //If it does, that means he stepped there more than once, and we should not remove him from the array of
+            //pieces who stepped on that position.
+            if (!getConcretePieceAtPosition(currentPos).steppedThere(currentPos))
+            {
+                numOfStepsBoard[currentPos.getX()][currentPos.getY()].removePieceFromArray(getConcretePieceAtPosition(currentPos));
+            }
             _board[recentPos.getX()][recentPos.getY()] = _board[currentPos.getX()][currentPos.getY()];
             //Remove the piece from its current position.
             _board[currentPos.getX()][currentPos.getY()] = null;

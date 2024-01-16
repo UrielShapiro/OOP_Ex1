@@ -57,6 +57,10 @@ public abstract class ConcretePiece implements Piece
     {
         moves.removeLast();
     }
+    public boolean steppedThere(Position pos)
+    {
+        return moves.contains(pos);
+    }
     public String MovesToString()
     {
         String ans = "[";
