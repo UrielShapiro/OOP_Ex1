@@ -83,6 +83,10 @@ public abstract class ConcretePiece implements Piece
             _kills++;
         }
     }
+    public void addKills(int k)
+    {
+        _kills = _kills + k;
+    }
     public void undoKill()
     {
         _kills--;
