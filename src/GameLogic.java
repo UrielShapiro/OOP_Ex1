@@ -5,9 +5,9 @@ public class GameLogic implements PlayableLogic {
     private final ConcretePlayer _firstPlayer = new ConcretePlayer(true);
     private final ConcretePlayer _secondPlayer = new ConcretePlayer(false);
     private final ConcretePiece[][] _board = new ConcretePiece[getBoardSize()][getBoardSize()];
-    private final Stack<Position> undoStack = new Stack<Position>();
-    private final Stack<Position> currentPosition = new Stack<Position>();
-    private final Stack<Pawn_Killed> killedPiecesStack = new Stack<Pawn_Killed>();
+    private final Stack<Position> undoStack = new Stack<>();
+    private final Stack<Position> currentPosition = new Stack<>();
+    private final Stack<Pawn_Killed> killedPiecesStack = new Stack<>();
     private static Position[][] numOfStepsBoard = new Position[BOARD_SIZE][BOARD_SIZE];
     private boolean firstPlayerTurn;
     private static boolean kingCaptured;
@@ -137,8 +137,7 @@ public class GameLogic implements PlayableLogic {
 
     @Override
     public boolean move(Position a, Position b) {
-        if (getConcretePieceAtPosition(a) == null)
-        {
+        if (getConcretePieceAtPosition(a) == null) {
             return false;
         }
         if (getConcretePieceAtPosition(a).getOwner().isPlayerOne() &&  isSecondPlayerTurn()) {
@@ -166,7 +165,7 @@ public class GameLogic implements PlayableLogic {
         numOfMoves++;
         boolean aKillWasMade = eat((ConcretePiece) getPieceAtPosition(b));
         if (!aKillWasMade) {
-            killedPiecesStack.add(new Pawn_Killed(_board[b.getX()][b.getY()], false));
+            killedPiecesStack.add(new Pawn_Killed(_board[b.getX()][b.getY()], false, null,null,null, null));
         }
         firstPlayerTurn = !firstPlayerTurn;
         kingWin = kingInCorner();
@@ -457,7 +456,7 @@ public class GameLogic implements PlayableLogic {
     }
     /*
     This function resets the game by doing the following:
-    - reseting the board by removing all of its pieces.
+    - reset the board by removing all of its pieces.
     - Changing both boolean variables linked to capturing the king and first player winning - to false.
         so that a new game could begin without ending immediately.
     - Clearing both stacks that are used for undoing a move.
@@ -489,7 +488,13 @@ public class GameLogic implements PlayableLogic {
         int i = 0;
         int numOfKills = 0;
         boolean firstPlayer;
+        Pawn p1 = null;
+        Pawn p2 = null;
+        Pawn p3 = null;
+        Pawn p4 = null;
         killedApiece = false;
+        //Reaching the piece from the player's array. Will be used later on the function to add the piece
+        //The amount of kills it got on that move.
         if (Cpiece.getOwner().isPlayerOne()) {
             firstPlayer = true;
             while (!_firstPlayer.getPieceFromArray(i).getPiecePosition().equals(Cpiece.getPiecePosition())) {
@@ -507,30 +512,30 @@ public class GameLogic implements PlayableLogic {
             // other parameters to be eaten).
             if (x == 1 && _board[x - 1][y] instanceof Pawn &&
                     !(Cpiece.getOwner().equals(_board[x - 1][y].getOwner()))) {
-                //If a piece needs to be eaten, we will add it first to the killed pieces array.
-                //Will be used to undo that kill if needed.
-                killedPiecesStack.add(new Pawn_Killed(_board[x - 1][y], true));
+                //For each piece that would get ate, we would add it to a stack of 'Pawn_Killed' object, which has all
+                //the pawns each piece has ate for a given move.
+                p1 = new Pawn((Pawn) _board[x-1][y]);
                 _board[x - 1][y] = null;    //Removing the killed piece from the board.
                 killedApiece = true;        //Will be used later to add a kill to 'Cpiece' later.
                 numOfKills++;  //Adds a kill to the counter. Will later be added to the piece 'kills' data member.
             }
             if (x == BOARD_SIZE - 2 && _board[x + 1][y] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x + 1][y].getOwner()))) {
-                killedPiecesStack.add(new Pawn_Killed(_board[x + 1][y], true));
+                p2 = new Pawn((Pawn) _board[x+1][y]);
                 _board[x + 1][y] = null;
                 killedApiece = true;
                 numOfKills++;
             }
             if (y == BOARD_SIZE - 2 && _board[x][y + 1] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x][y + 1].getOwner()))) {
-                killedPiecesStack.add(new Pawn_Killed(_board[x][y + 1], true));
+                p3 = new Pawn((Pawn) _board[x][y+1]);
                 _board[x][y + 1] = null;
                 killedApiece = true;
                 numOfKills++;
             }
             if (y == 1 && _board[x][y - 1] instanceof Pawn
                     && !(Cpiece.getOwner().equals(_board[x][y - 1].getOwner()))) {
-                killedPiecesStack.add(new Pawn_Killed(_board[x][y - 1], true));
+                p4 = new Pawn((Pawn) _board[x][y-1]);
                 _board[x][y - 1] = null;
                 killedApiece = true;
                 numOfKills++;
@@ -541,7 +546,7 @@ public class GameLogic implements PlayableLogic {
                 if (_board[x + 1][y] instanceof Pawn && _board[x + 2][y] instanceof Pawn) {
                     if (!_board[x + 1][y].getOwner().equals(_board[x][y].getOwner())
                             && _board[x][y].getOwner().equals(_board[x + 2][y].getOwner())) {
-                        killedPiecesStack.add(new Pawn_Killed(_board[x + 1][y], true));
+                        p1 = new Pawn((Pawn) _board[x+1][y]);
                         _board[x + 1][y] = null;
                         killedApiece = true;
                         numOfKills++;
@@ -552,7 +557,7 @@ public class GameLogic implements PlayableLogic {
                 if (_board[x - 1][y] instanceof Pawn && _board[x - 2][y] instanceof Pawn) {
                     if (!_board[x - 1][y].getOwner().equals(_board[x][y].getOwner())
                             && _board[x][y].getOwner().equals(_board[x - 2][y].getOwner())) {
-                        killedPiecesStack.add(new Pawn_Killed(_board[x - 1][y], true));
+                        p2 = new Pawn((Pawn) _board[x-1][y]);
                         _board[x - 1][y] = null;
                         killedApiece = true;
                         numOfKills++;
@@ -563,7 +568,7 @@ public class GameLogic implements PlayableLogic {
                 if (_board[x][y + 1] instanceof Pawn && _board[x][y + 2] instanceof Pawn) {
                     if (!_board[x][y + 1].getOwner().equals(_board[x][y].getOwner())
                             && _board[x][y].getOwner().equals(_board[x][y + 2].getOwner())) {
-                        killedPiecesStack.add(new Pawn_Killed(_board[x][y + 1], true));
+                        p3 = new Pawn((Pawn) _board[x][y+1]);
                         _board[x][y + 1] = null;
                         killedApiece = true;
                         numOfKills++;
@@ -574,14 +579,18 @@ public class GameLogic implements PlayableLogic {
                 if (_board[x][y - 1] instanceof Pawn && _board[x][y - 2] instanceof Pawn) {
                     if (!_board[x][y - 1].getOwner().equals(_board[x][y].getOwner())
                             && _board[x][y].getOwner().equals(_board[x][y - 2].getOwner())) {
-                        killedPiecesStack.add(new Pawn_Killed(_board[x][y - 1], true));
+                        p4 = new Pawn((Pawn) _board[x][y-1]);
                         _board[x][y - 1] = null;
                         killedApiece = true;
                         numOfKills++;
                     }
                 }
             }
-
+            if (killedApiece)
+            {
+                Pawn_Killed pawn = new Pawn_Killed(Cpiece,true,p1,p2,p3,p4);
+                killedPiecesStack.add(pawn);
+            }
             eatKing(Cpiece);    //Calls a function that checks if the king was eaten that turn.
             killedApiece = false;
             if (firstPlayer) {
@@ -780,18 +789,30 @@ public class GameLogic implements PlayableLogic {
                 Pawn_Killed maybeKilledPiece = killedPiecesStack.pop();
                 if (maybeKilledPiece.gotKilled()) {   //If the last piece from the array was killed, it will be brought back.
                     //Retrieving the position which the piece was last located
-                    Position p_position = maybeKilledPiece.getPiece().getPosition();
-                    _board[p_position.getX()][p_position.getY()] = maybeKilledPiece.getPiece();
+
+                    //Checking which of the surrounding pieces was killed and should be brought back.
+                    if (maybeKilledPiece.getPiece1() != null)
+                    {
+                        Position pos = new Position(maybeKilledPiece.getPiece1().getPosition());
+                        _board[pos.getX()][pos.getY()] = (ConcretePiece) maybeKilledPiece.getPiece1();
+                    }
+                    if (maybeKilledPiece.getPiece2() != null)
+                    {
+                        Position pos = new Position(maybeKilledPiece.getPiece2().getPosition());
+                        _board[pos.getX()][pos.getY()] = (ConcretePiece) maybeKilledPiece.getPiece2();
+                    }
+                    if (maybeKilledPiece.getPiece3() != null)
+                    {
+                        Position pos = new Position(maybeKilledPiece.getPiece3().getPosition());
+                        _board[pos.getX()][pos.getY()] = (ConcretePiece) maybeKilledPiece.getPiece3();
+                    }
+                    if (maybeKilledPiece.getPiece4() != null)
+                    {
+                        Position pos = new Position(maybeKilledPiece.getPiece4().getPosition());
+                        _board[pos.getX()][pos.getY()] = (ConcretePiece) maybeKilledPiece.getPiece4();
+                    }
                     _board[recentPos.getX()][recentPos.getY()].undoKill();  //Removes 1 kill from the kill counter of that piece.
                 }
-            }
-            //In cases where a piece killed more than one piece in one move, we would want to return all the pieces
-            //killed in that move.
-            while (killedPiecesStack.size() > numOfMoves && getPieceAtPosition(killedPiecesStack.peek().getPiece().getPosition()) == null) {
-                Pawn_Killed returningPiece = killedPiecesStack.pop();
-                Position p_position = returningPiece.getPiece().getPosition();
-                _board[p_position.getX()][p_position.getY()] = returningPiece.getPiece();
-                _board[recentPos.getX()][recentPos.getY()].undoKill();
             }
             //Setting the turn back to the last player.
             firstPlayerTurn = !firstPlayerTurn;

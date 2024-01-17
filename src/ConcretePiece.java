@@ -19,6 +19,16 @@ public abstract class ConcretePiece implements Piece
         _pieceNumber = number;
         moves.add(position);
     }
+    public ConcretePiece(Pawn piece)
+    {
+        this._player = piece.getConcreteOwner();
+        this._type = piece.getType();
+        this._position = piece.getPosition();
+        this._piecePosition = piece.getPiecePosition();
+        this._kills = piece.getNumberOfKills();
+        this._pieceNumber = piece.getPieceNumber();
+        this.moves.add(piece.getPosition());
+    }
     @Override
     public Player getOwner() {
         return _player;
@@ -48,10 +58,6 @@ public abstract class ConcretePiece implements Piece
     public int getNumOfMoves()
     {
         return this.moves.size();
-    }
-    public ArrayList<Position> getMoves()
-    {
-        return moves;
     }
     public void removeLastMove()
     {
