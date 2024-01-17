@@ -1,16 +1,13 @@
-import java.util.ArrayList;
-import java.util.Stack;
-
 /*
 This class is used for the undo move function.
-In the GameLogic class, when moving a piece, a new Pawn_Killed object will be made and inserted to a stack.
+In the GameLogic class, when moving a piece, a new Pawns_Killed object will be made and inserted to a stack.
 The Stack will contain all the moves in the game.
 If a piece was killed in a given turn, that piece will be added to the array (instead of the moving piece) and its "killed"
 status will be true.
-When undoing a move, we will pop Pawn_Killed objects from the stack.
-If the popped Pawn_Killed.killed == true, we will bring it back to the board.
+When undoing a move, we will pop Pawns_Killed objects from the stack.
+If the popped Pawns_Killed.killed == true, we will bring it back to the board.
  */
-public class Pawn_Killed {
+public class Pawns_Killed {
     private final ConcretePiece piece;
     private final boolean killed;
     private Pawn piece1;
@@ -19,7 +16,7 @@ public class Pawn_Killed {
     private Pawn piece4;
 
 
-    public Pawn_Killed(ConcretePiece p, boolean GotKilled, Pawn p1, Pawn p2, Pawn p3, Pawn p4)
+    public Pawns_Killed(ConcretePiece p, boolean GotKilled, Pawn p1, Pawn p2, Pawn p3, Pawn p4)
     {
         this.piece = p;              //The piece who was killed or the piece who moved (if no piece was killed).
         this.killed = GotKilled;     //Will be true only if it was killed.
@@ -36,7 +33,11 @@ public class Pawn_Killed {
            piece4 = new Pawn(p4);
        }
     }
-    public boolean gotKilled()
+    public ConcretePiece getPiece()
+    {
+        return piece;
+    }
+    public boolean killedPieces()
     {
         return killed;
     }
